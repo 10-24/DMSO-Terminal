@@ -1,0 +1,11 @@
+# Python Standard Library
+# tkinter (usually included with Python)
+
+# External dependencies
+matplotlib
+pandas
+numpy
+# Install hyperliquid SDK from GitHub:
+# pip install git+https://github.com/hyperliquid-dex/hyperliquid-python-sdk.git
+git+https://github.com/hyperliquid-dex/hyperliquid-python-sdk.git
+
