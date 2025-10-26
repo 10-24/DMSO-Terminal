@@ -6,7 +6,7 @@ from pandas import DataFrame
 from datetime import datetime
 from src.helpers import timestamp_ms
 from time_interval import TimeInterval
-from helpers import NORMALIZED_CANDLE_COLUMNS
+from helpers import NORMALIZED_CANDLE_MAP
 
 class Dex:
     
@@ -64,7 +64,7 @@ class Dex:
 
 def normalize_candles(raw_candles_array:list[dict]):
     raw_candles = pd.DataFrame(raw_candles_array)
-    return raw_candles.rename(columns=NORMALIZED_CANDLE_COLUMNS)
+    return raw_candles.rename(columns=NORMALIZED_CANDLE_MAP)
 
 def append_raw_candle(candles:DataFrame,raw_candle:dict):
     new_candle = normalize_candles([raw_candle])

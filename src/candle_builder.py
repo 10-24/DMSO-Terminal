@@ -1,70 +1,103 @@
-from concurrent.futures import thread
+import threading
 from datetime import datetime
 import pandas as pd
-from helpers import RAW_CANDLE_COLS,timestamp_ms
-import threading
+from helpers import CANDLE_COLS,timestamp_ms
 
+import threading
+from candle import Candle, Trade
 # Ensure RAW_CANDLE_COLS is a pandas Index, Series, or appropriate type for the columns param
-template_raw_candle = pd.DataFrame(columns=pd.Index(RAW_CANDLE_COLS))
+
+
+
 class CandleBuilder:
     
     
     def __init__(self, interval_sec: int,on_candle_callback):
+
         self.on_candle_callback = on_candle_callback
         self.interval_sec = interval_sec
-        self.buffer = {"OpenTime_ms": None, "trades":[]}
-        self.prev_avg = None
-        self._start_interval()
+        self.buffer = {"open_timestamp": None, "trades":[]}
+        
+        self._start_interval(None)
         
    
+    def on_trade(self,raw_trade):
+        new_trade = Trade.from_raw(raw_trade)
+        self.buffer["trades"].append(new_trade)
         
-        
-    def on_trade(self):
-        trades = self.trade_buffer
-        
-        # Get the first trade's timestamp as the start of the current candle
-        first_trade_time = trades[0]['time']
-        candle_start_ms = (first_trade_time // interval_ms) * interval_ms
-        
-        # Group trades into the current candle
-        candle_trades = []
-        remaining_trades = []
+     
 
 
     
-    def _start_interval(self):
-        open = timestamp_ms(datetime.now())
-        self.buffer = {"OpenTime_ms": open, "trades":[]}
+    def _start_interval(self,prev_candle:Candle|None):
+
+        self.buffer = {
+            "prev_candle":prev_candle,
+            'open_timestamp':timestamp_ms(datetime.now()),
+            'trades':[]
+        }
+
+        threading.Timer(self.interval_sec,self._emit_candle)
+        
+        
+    
+    # Emits candle and restarts the interval
+    def _emit_candle(self):
+
+        if self.buffer['trades'].__len__() == 0:
+            new_candle = self._create_empty_candle()
+
+            self.on_candle_callback(new_candle)
+            self._start_interval(new_candle)
+            return
+        
+
+        open_timestamp = self.buffer['open_timestamp']
+        close_timestamp = timestamp_ms(datetime.now())
+
+        trades_list:list[Trade] = self.buffer['trades']
+
+        open_price = self.buffer['prev_candle'].close_price
+        close_price = trades_list[-1].price
+       
+        trades = pd.DataFrame(self.buffer['trades'])
+        
+      
+        volume = trades['size'].sum();
+        num_trades = trades.__len__()
+
+        high_price = trades['price'].max()
+        low_price = trades['price'].max()
+        avg_price = (trades['price'] * trades['size']) / volume
+        
+        
+        
+        new_candle = Candle(open_timestamp,close_timestamp,open_price,close_price,high_price,low_price,avg_price,volume,num_trades)
+        
+        
+    def _create_empty_candle(self):
+        
+        prev_candle = self.buffer['prev_candle']
+
+        open_timestamp:int = self.buffer['open_timestamp']
+        close_timestamp:int = timestamp_ms(datetime.now())
+
+        avg_price = 0
+        open_price = 0
+
+        if prev_candle != None:
+            avg_price = prev_candle.avg_price
+            open_price = prev_candle.close_price
+
+        
+        return Candle(open_timestamp,close_timestamp,open_price,open_price,open_price,open_price,avg_price,0,0)
+        
+
         
     
         
-    def _emit_candle_(self):
-        
-        OpenTime_ms = self.buffer['OpenTime_ms']
-        CloseTime_ms = timestamp_ms(datetime.now())
-        
-        trades:list = self.buffer['trades']
-        
-        if trades.__len__() == 0:
-            return pd.DataFrame({"OpenTime_ms":OpenTime_ms,})
-        
+
    
-        
-        
-        
-        
-        volume = 0
-        
-        open_price = None
-        close_price = None
-        if trades.__len__() > 0:
-            open_price = trades[0]['px']
-            close_price = trades[-1]['px']
-        
-        volume = 0
-        high = None
-        low = None
-        for trade in trades
         
         
 # interface WsTrade {
