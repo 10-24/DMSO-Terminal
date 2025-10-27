@@ -44,14 +44,14 @@ class Dex:
         candle_builder = Candles(interval_sec, callback)
 
         def on_trade(trades_data):
-     
+            print(trades_data)
             for trade in trades_data['data']:
                 print(f"trades_data = {trades_data}")
                 # Validate trade is a dictionary with expected fields
                 if trade.get('coin') == ticker:
                     print(trade)
                     candle_builder.on_trade(trade)
-
+        print("ran")
         self.info.subscribe({"type": "trades", "coin": ticker}, on_trade)
     
     

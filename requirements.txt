@@ -5,6 +5,8 @@
 matplotlib
 pandas
 numpy
+rio-ui
+plotly
 # Install hyperliquid SDK from GitHub:
 # pip install git+https://github.com/hyperliquid-dex/hyperliquid-python-sdk.git
 git+https://github.com/hyperliquid-dex/hyperliquid-python-sdk.git
