@@ -1,10 +1,13 @@
 import datetime
+from typing import Callable
 import pandas as pd
 from hyperliquid.info import Info
 from hyperliquid.utils import constants
 from pandas import DataFrame
 from datetime import datetime
-from src.helpers import timestamp_ms
+from helpers import timestamp_ms
+from candles import Candles
+from candle import Candle
 from time_interval import TimeInterval
 from helpers import NORMALIZED_CANDLE_MAP
 
@@ -25,8 +28,6 @@ class Dex:
             
         self.info.subscribe({"type": "candle", "coin": "ETH", "interval": "1m"},on_new_candle)
         
- 
-            
         
         
     def fetch_historical(self,ticker:str,interval:TimeInterval,start:datetime):
@@ -38,24 +39,19 @@ class Dex:
         
         return normalize_candles(raw_candles_array)
     
-    def listen(self, ticker: str, interval_seconds: int, callback):
+    def listen(self, ticker: str, interval_sec: int, callback:Callable[[pd.DataFrame], None]):
         
-        interval_ms = interval_seconds * 1000
-        
-        # Initialize trade buffer for this ticker
-        if ticker not in self.trade_buffers:
-            self.trade_buffers[ticker] = []
-        
+        candle_builder = Candles(interval_sec, callback)
+
         def on_trade(trades_data):
-            """Called when new trades arrive"""
-            for trade in trades_data:
-                if trade['coin'] == ticker:
-                    self.trade_buffers[ticker].append(trade)
-                    candle = self._build_candle_from_trades(ticker, interval_ms)
-                    if candle is not None:
-                        callback(candle)
-        
-        # Subscribe to trades
+     
+            for trade in trades_data['data']:
+                print(f"trades_data = {trades_data}")
+                # Validate trade is a dictionary with expected fields
+                if trade.get('coin') == ticker:
+                    print(trade)
+                    candle_builder.on_trade(trade)
+
         self.info.subscribe({"type": "trades", "coin": ticker}, on_trade)
     
     

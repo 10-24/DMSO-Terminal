@@ -1,5 +1,6 @@
 import threading
 from datetime import datetime
+from typing import Callable
 import pandas as pd
 from helpers import CANDLE_COLS,timestamp_ms
 
@@ -9,77 +10,72 @@ from candle import Candle, Trade
 
 
 
-class CandleBuilder:
+class Candles:
     
     
-    def __init__(self, interval_sec: int,on_candle_callback):
+    def __init__(self, interval_sec: int,on_candle_callback:Callable[[pd.DataFrame], None]):
 
-        self.on_candle_callback = on_candle_callback
+        self.dataframe = pd.DataFrame()
+        self._on_candle_callback = on_candle_callback
         self.interval_sec = interval_sec
-        self.buffer = {"open_timestamp": None, "trades":[]}
-        
+        self._buffer = {"open_timestamp": None, "trades":[]}
+
         self._start_interval(None)
         
    
     def on_trade(self,raw_trade):
         new_trade = Trade.from_raw(raw_trade)
-        self.buffer["trades"].append(new_trade)
+        self._buffer["trades"].append(new_trade)
         
-     
-
-
+    
     
     def _start_interval(self,prev_candle:Candle|None):
 
-        self.buffer = {
+        self._buffer = {
             "prev_candle":prev_candle,
             'open_timestamp':timestamp_ms(datetime.now()),
             'trades':[]
         }
 
-        threading.Timer(self.interval_sec,self._emit_candle)
+        timer = threading.Timer(self.interval_sec, self._add_candle)
+        timer.start()
         
-        
-    
-    # Emits candle and restarts the interval
-    def _emit_candle(self):
+  
+    def _add_candle(self):
 
-        if self.buffer['trades'].__len__() == 0:
-            new_candle = self._create_empty_candle()
-
-            self.on_candle_callback(new_candle)
+        def append_and_complete(new_candle:Candle):
+            self.dataframe = pd.concat([self.dataframe, new_candle.to_dataframe()], ignore_index=True)
+            self._on_candle_callback(self.dataframe)
             self._start_interval(new_candle)
+    
+        if self._buffer['trades'].__len__() == 0:
+            append_and_complete(self._create_empty_candle())
             return
         
 
-        open_timestamp = self.buffer['open_timestamp']
+        open_timestamp = self._buffer['open_timestamp']
         close_timestamp = timestamp_ms(datetime.now())
 
-        trades_list:list[Trade] = self.buffer['trades']
-
-        open_price = self.buffer['prev_candle'].close_price
-        close_price = trades_list[-1].price
+        prev_candle = self._buffer['prev_candle']
+        open_price = prev_candle.close_price if prev_candle != None else self._buffer['trades'][0].price
+        close_price = self._buffer['trades'][-1].price
        
-        trades = pd.DataFrame(self.buffer['trades'])
-        
-      
-        volume = trades['size'].sum();
-        num_trades = trades.__len__()
+        trades = pd.DataFrame([{'price': t.price, 'size': t.size} for t in self._buffer['trades']])
 
+        volume = trades['size'].sum()
+        num_trades = trades.__len__()
         high_price = trades['price'].max()
-        low_price = trades['price'].max()
-        avg_price = (trades['price'] * trades['size']) / volume
-        
-        
+        low_price = trades['price'].min()  # Fixed: was .max()
+        avg_price = (trades['price'] * trades['size']).sum() / volume  # Fixed: sum before divide
         
         new_candle = Candle(open_timestamp,close_timestamp,open_price,close_price,high_price,low_price,avg_price,volume,num_trades)
-        
+        append_and_complete(new_candle)
         
     def _create_empty_candle(self):
         
-        prev_candle = self.buffer['prev_candle']
+        prev_candle = self._buffer['prev_candle']
 
-        open_timestamp:int = self.buffer['open_timestamp']
+        open_timestamp:int = self._buffer['open_timestamp']
         close_timestamp:int = timestamp_ms(datetime.now())
 
         avg_price = 0
@@ -91,7 +87,8 @@ class CandleBuilder:
 
         
         return Candle(open_timestamp,close_timestamp,open_price,open_price,open_price,open_price,avg_price,0,0)
-        
+    
+
 
         
     
