@@ -3,18 +3,24 @@ use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 use yew_router::prelude::*;
 
+mod terminal;
+use terminal::Terminal;
+
 #[derive(Clone, Routable, PartialEq)]
 enum Route {
     #[at("/")]
-    Home,
+    Terminal,
     #[at("/hello-server")]
     HelloServer,
+    #[at("/chart")]
+    Chart,
 }
 
 fn switch(routes: Route) -> Html {
     match routes {
-        Route::Home => html! { <h1>{ "Hello Frontend" }</h1> },
+        Route::Terminal => html! { <Terminal /> },
         Route::HelloServer => html! { <HelloServer /> },
+        Route::Chart => html! { <ChartDemo /> },
     }
 }
 
@@ -73,6 +79,18 @@ fn hello_server() -> Html {
                 <div>{"Error requesting data from server: "}{err}</div>
             }
         }
+    }
+}
+
+#[function_component(ChartDemo)]
+fn chart_demo() -> Html {
+    let chart_container_id = use_state(|| "chart-container".to_string());
+
+    html! {
+        <div style="padding: 20px;">
+            <h2>{ "Charming Chart Demo" }</h2>
+            <div id={(*chart_container_id).clone()} style="width: 800px; height: 500px;"></div>
+        </div>
     }
 }
 
