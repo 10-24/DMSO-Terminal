@@ -1,51 +1,44 @@
+use litemap::LiteMap;
 use std::{
-    rc::Rc,
-    sync::{Arc, RwLock},
+    rc::{self, Rc, Weak},
+    sync::{self, Arc, RwLock},
 };
 
-use litemap::LiteMap;
+use crate::exchange::candle::indicator::Indicator;
 
-pub struct BroadcastNode {
-    children: ChildrenRcs<TickerId, TickerNode>,
+#[derive(Debug)]
+pub struct Broadcast {
+    tickers: LiteMap<Box<TickerId>,rc::Weak<RwLock<TickerNode>>>,
 }
 
-impl BroadcastNode {
-    pub fn subscribe(
-        &mut self,
-        ticker: &TickerId,
-        interval: &IntervalId,
-        indicators: Vec<crate::exchange::candle::indicator::Indicator>,
-    ) -> Result<Subscription, String> {
-        // Now you can access self.children here
-        todo!()
-    }
-}
-
+#[derive(Debug)]
 struct TickerNode {
-    parent: ParentRef<BroadcastNode>,
-    children: ChildrenRcs<IntervalId, IntervalNode>,
+    children: LiteMap<IntervalId,rc::Weak<RwLock<IntervalNode>>>,
 }
-
+#[derive(Debug)]
 struct IntervalNode {
     parent: ParentRef<TickerNode>,
-    children: ChildrenRcs<IndicatorId, IndicatorNode>,
+    children: LiteMap<Indicator,sync::Weak<RwLock<IndicatorNode>>>,
 }
-
+#[derive(Debug)]
 struct IndicatorNode {
     parent: ParentRef<IntervalNode>,
 }
-
+#[derive(Debug)]
 pub struct Subscription {
-    parents: Box<[Arc<Parent<IndicatorNode>>]>,
+    indicators: Box<[Arc<Parent<IndicatorNode>>]>,
 }
 
 type Parent<PType> = RwLock<PType>;
 type ParentRef<PType> = Rc<Parent<PType>>;
 
-type Child<CType> = RwLock<CType>;
-type ChildrenRcs<CId, CType> = LiteMap<Box<CId>, Rc<Child<CType>>>;
+
+
 
 pub type ExchangeId = str;
 pub type TickerId = str;
 pub type IntervalId = u32;
-pub type IndicatorId = str;
+
+
+#[path = "broadcast_node.rs"]
+mod broadcast_node;

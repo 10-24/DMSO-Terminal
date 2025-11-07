@@ -1,2 +1,2 @@
 pub mod hierarchy;
-mod nodes;
+pub mod subscription;
