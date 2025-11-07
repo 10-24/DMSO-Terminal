@@ -1,15 +1,3 @@
-# Virtual environments
-venv/
-env/
-ENV/
-.venv/
-
-# Python cache
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-
 # Rust build artifacts
 target/
 target-trunk/
